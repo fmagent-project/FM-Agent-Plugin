@@ -39,13 +39,7 @@ Run FM-Agent's install script to set up required dependencies:
 "${CLAUDE_PLUGIN_DATA}/FM-Agent/install.sh"
 ```
 
-If the install script fails while installing/updating oh-my-openagent and reports the following error:
-```
-Error: Interactive installer requires a TTY. Use --non-interactive or set environment variables directly.
-```
-This is normal — the core dependencies were installed. Continue to the next step.
-
-If the install script fails at other steps, stop the installation and inform the user to install manually.
+If the install script fails, stop the installation and inform the user to install manually.
 
 ### Step 3: Verify Installation
 

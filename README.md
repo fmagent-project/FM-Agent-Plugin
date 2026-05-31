@@ -23,6 +23,7 @@ This plugin integrates [FM-Agent](https://github.com/haoran-ding/FM-Agent) into 
 | `/fm-agent:auto-fix` | Run FM-Agent verification-repair loop for the whole codebase |
 | `/fm-agent:run` | Execute FM-Agent analysis on current project without repairing bugs (background) |
 | `/fm-agent:diagnose` | View bug analysis results |
+| `/fm-agent:export` | Export the Claude Code conversation after a git commit |
 | `/fm-agent:help` | Show help information |
 
 ### install
@@ -35,24 +36,19 @@ Then run `${CLAUDE_PLUGIN_DATA}/FM-Agent/install.sh` to install dependencies.
 
 ### config
 
-Read and modify FM-Agent settings split across two files:
-- API key → `${CLAUDE_PLUGIN_DATA}/.env` (sourced at runtime via `source .env`)
-- All other settings → `${CLAUDE_PLUGIN_DATA}/FM-Agent/config.py`
+Read and modify FM-Agent settings stored in `${CLAUDE_PLUGIN_DATA}/.env` (sourced at runtime via `source .env`).
 
 Workflow:
-- If `.env` already exists, show its contents and ask whether to change the stored API key
-- If updating the key (or `.env` doesn't exist), use `$OPENROUTER_API_KEY` from the environment if set, otherwise prompt the user
-- List the current `config.py` values, then use AskUserQuestion (multi-select) to let the user pick which settings to modify
+- If `.env` does not exist, create it with default values
+- List the current `.env` values as a table
+- Ask whether to modify any settings; if yes, use AskUserQuestion (multi-select) to let the user pick which settings to modify and prompt for each new value
+- After writing changes, verify `OPENROUTER_API_KEY` is set; if not, loop back to the modification step
 
-**Configurable settings**:
-- `LLM_MODEL` - Default model used as fallback for all task-specific model settings (default: `anthropic/claude-sonnet-4.6`)
-- `OPENCODE_SETUP_MODEL` - Codebase understanding, phase planning, domain context
-- `OPENCODE_SPEC_MODEL` - Batch behavioral spec generation
-- `OPENCODE_BUG_VALIDATION_MODEL` - Validation of `MISMATCH` results with probe scripts
-- `REASONER_POST_CONDITION_MODEL` - Block post-condition generation
-- `REASONER_SPEC_CHECK_MODEL` - Spec violation checking
-- `LLM_OPENROUTER_API_KEY` - OpenRouter API key (stored in `.env`)
-- `LLM_OPENROUTER_API_BASE_URL` - OpenRouter API endpoint
+**Configurable settings** (all stored in `.env`):
+- `OPENROUTER_API_KEY` - OpenRouter API key (required for FM-Agent LLM calls)
+- `LLM_API_BASE_URL` - OpenRouter API endpoint (default: `https://openrouter.ai/api/v1`)
+- `LLM_MODEL` - Default model used by FM-Agent (default: `anthropic/claude-sonnet-4.6`)
+- `OPENCODE_MODEL_PROVIDER` - Model provider used by OpenCode (default: `openrouter`)
 
 ### auto-fix
 
@@ -76,9 +72,12 @@ Session artifacts live under `./fm_agent_plugin/`:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `${CLAUDE_PLUGIN_DATA}/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- If `./fm_agent/` already exists, ask the user whether to **resume** (use `--resume`) or **start fresh** (delete and rerun)
+- Accepts an optional git commit id argument intended for incremental analysis (`--incremental <commit-id>`). **Incremental mode is not yet implemented** — when a commit id is supplied, the skill stops and asks the user whether to run a full-project analysis instead.
+- If `./fm_agent/` already exists, ask the user whether to **resume** or **start fresh**. **Resume (`--resume`) is not yet implemented** — when chosen, the skill stops and asks the user whether to start fresh instead.
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
+
+The skill also exposes an **orchestration mode** used exclusively by `/fm-agent:auto-fix` to run a single deterministic full-project verification round synchronously, with no resume/fresh prompts and no background polling.
 
 ### diagnose
 
@@ -86,6 +85,16 @@ Read FM-Agent output from `./fm_agent/`:
 - **Summary first**: Show `bug_validation/summary.json` with totals
 - **Details on request**: Show individual bug reports (`<source>--<function>.md`)
 - Bug reports include: specification claim, actual behavior, code evidence, trigger condition, probe script, probe output
+
+### export
+
+Export the Claude Code conversation after a git commit completes. Runs automatically after each `git commit` Bash command — no manual invocation required.
+
+For each commit, the skill writes two files to `./fm_agent_plugin/` in the current project directory:
+- `export-<COMMIT_ID>.md` — Full transcript of conversation turns between this commit and the previous one (or session start, if this is the first in-session commit)
+- `export-<COMMIT_ID>-summary.md` — Concise summary of the user's intent, decisions, and goal-level description of code changes
+
+After writing the export, the skill asks the user whether to run incremental FM-Agent analysis on the just-committed changes (`/fm-agent:run <COMMIT_ID>`). If multiple commits are made in a single session, the skill runs once per commit, scoping each export to the conversation turns belonging to that commit.
 
 ### Output Directory
 
