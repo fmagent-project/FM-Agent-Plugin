@@ -1,9 +1,19 @@
 {
   "name": "fm-agent-plugin",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Plugin for using FM-Agent framework with fully automated reasoning for large-scale systems",
   "author": {
-    "name": "Yuesong Feng",
+    "name": "yuesong-feng",
     "email": "yuesong-feng@foxmail.com"
-  }
+  },
+  "homepage": "https://github.com/haoran-ding/FM-Agent-Plugin",
+  "repository": "https://github.com/haoran-ding/FM-Agent-Plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "FM-Agent",
+    "formal methods",
+    "automated reasoning",
+    "bug finding",
+    "bug fixing"
+  ]
 }

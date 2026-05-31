@@ -1,21 +1,18 @@
 {
   "name": "fm-agent-plugin",
-  "id": "fm-agent-plugin",
   "owner": {
-    "name": "haoran-ding"
-  },
-  "metadata": {
-    "description": "Plugin for using FM-Agent framework with fully automated reasoning for large-scale systems",
-    "version": "0.1.0"
+    "name": "haoran-ding",
+    "email": "nhaorand@gmail.com"
   },
   "plugins": [
     {
       "name": "fm-agent-plugin",
       "source": "./",
       "description": "Plugin for using FM-Agent framework with fully automated reasoning for large-scale systems",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "author": {
-        "name": "yuesong-feng"
+        "name": "yuesong-feng",
+        "email": "yuesong-feng@foxmail.com"
       }
     }
   ]
