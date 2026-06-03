@@ -28,7 +28,7 @@ cat ${CLAUDE_PLUGIN_DATA}/.env 2>/dev/null || echo "NO_ENV_FILE"
 **If `.env` does not exist:** Create an `.env` file in `${CLAUDE_PLUGIN_DATA}/` with default content:
 
 ```
-export OPENROUTER_API_KEY=""
+export LLM_API_KEY=""
 export LLM_API_BASE_URL="https://openrouter.ai/api/v1"
 export LLM_MODEL="anthropic/claude-sonnet-4.6"
 export OPENCODE_MODEL_PROVIDER="openrouter"
@@ -42,7 +42,7 @@ Read file `${CLAUDE_PLUGIN_DATA}/.env` and list configuration as table:
 
 | Parameter                       | Value                          |
 | ------------------------------- | ------------------------------ | 
-| `OPENROUTER_API_KEY`            | <current_value>                |
+| `LLM_API_KEY`            | <current_value>                |
 | `LLM_API_BASE_URL`              | <current_value>                |
 | `LLM_MODEL`                     | <current_value>                |
 | `OPENCODE_MODEL_PROVIDER`       | <current_value>                |
@@ -55,7 +55,7 @@ If the user selects "yes", then use AskUserQuestion to ask which configuration t
 - Question: "Which configuration do you want to modify? (you can select multiple)"
 - multiSelect: true
 - Options:
-  - OPENROUTER_API_KEY
+  - LLM_API_KEY
   - LLM_API_BASE_URL
   - LLM_MODEL
   - OPENCODE_MODEL_PROVIDER
@@ -67,7 +67,7 @@ Then update the `${CLAUDE_PLUGIN_DATA}/.env` file with the new value.
 
 ### Step 3: Next Steps
 
-Check whether the user has set `OPENROUTER_API_KEY`. If not, inform the user to set it and go back to Step 2.
+Check whether the user has set `LLM_API_KEY`. If not, inform the user to set it and go back to Step 2.
 
 After successful configuration, inform the user:
 
