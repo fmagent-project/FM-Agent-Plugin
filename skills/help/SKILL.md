@@ -38,10 +38,10 @@ Workflow:
 - If `.env` does not exist, create it with default values
 - List the current `.env` values as a table
 - Ask whether to modify any settings; if yes, use AskUserQuestion (multi-select) to let the user pick which settings to modify and prompt for each new value
-- After writing changes, verify `OPENROUTER_API_KEY` is set; if not, loop back to the modification step
+- After writing changes, verify `LLM_API_KEY` is set; if not, loop back to the modification step
 
 **Configurable settings** (all stored in `.env`):
-- `OPENROUTER_API_KEY` - OpenRouter API key (required for FM-Agent LLM calls)
+- `LLM_API_KEY` - OpenRouter API key (required for FM-Agent LLM calls)
 - `LLM_API_BASE_URL` - OpenRouter API endpoint (default: `https://openrouter.ai/api/v1`)
 - `LLM_MODEL` - Default model used by FM-Agent (default: `anthropic/claude-sonnet-4.6`)
 - `OPENCODE_MODEL_PROVIDER` - Model provider used by OpenCode (default: `openrouter`)
