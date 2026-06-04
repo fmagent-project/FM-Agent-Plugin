@@ -1,0 +1,39 @@
+{
+  "name": "fm-agent-plugin",
+  "version": "1.0.0",
+  "description": "Plugin for using FM-Agent framework with fully automated reasoning for large-scale systems",
+  "author": {
+    "name": "yuesong-feng",
+    "email": "yuesong-feng@foxmail.com",
+    "url": "https://github.com/yuesong-feng"
+  },
+  "homepage": "https://github.com/fmagent-project/FM-Agent-Plugin",
+  "repository": "https://github.com/fmagent-project/FM-Agent-Plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "FM-Agent",
+    "formal methods",
+    "automated reasoning",
+    "bug finding",
+    "bug fixing"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "FM-Agent",
+    "shortDescription": "Run FM-Agent reasoning, diagnosis, and repair workflows from Codex.",
+    "longDescription": "FM-Agent integrates automated reasoning for large-scale systems into Codex through reusable skills for installation, configuration, full-project analysis, diagnosis, and verification-guided repair loops.",
+    "developerName": "yuesong-feng",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/fmagent-project/FM-Agent-Plugin",
+    "defaultPrompt": [
+      "Install FM-Agent for this workspace.",
+      "Configure FM-Agent API settings.",
+      "Run FM-Agent analysis on this project."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
