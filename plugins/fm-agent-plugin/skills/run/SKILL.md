@@ -1,5 +1,5 @@
 ---
-name: FM-Agent Run
+name: FM-Agent-Run
 description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Accepts an optional git commit id argument — when supplied, only the changes introduced by that commit are analyzed (incremental mode).
 version: 0.3.0
 allowed-tools: Bash(*), AskUserQuestion, Skill
@@ -9,7 +9,7 @@ Execute FM-Agent to analyze the project codebase for bugs.
 
 ## Overview
 
-This skill runs FM-Agent from the plugin data directory `${CLAUDE_PLUGIN_DATA}/FM-Agent` to analyze the current project directory. FM-Agent performs fully automated reasoning using LLM-based Hoare-style verification.
+This skill runs FM-Agent from the plugin data directory `$HOME/.fm-agent-plugin/FM-Agent` to analyze the current project directory. FM-Agent performs fully automated reasoning using LLM-based Hoare-style verification.
 
 ## Argument: `<commit-id>` (optional)
 
@@ -35,7 +35,7 @@ In orchestration mode, ignore the optional `<commit-id>` argument entirely. `fm-
 
 ## Prerequisites
 
-- `fm-agent:install` executed before to have FM-Agent installed in the plugin data directory `${CLAUDE_PLUGIN_DATA}/FM-Agent/`
+- `fm-agent:install` executed before to have FM-Agent installed in the plugin data directory `$HOME/.fm-agent-plugin/FM-Agent/`
 - `fm-agent:config` executed before to set up necessary configuration
 
 ## Default Direct-User Mode
@@ -46,10 +46,10 @@ Use this mode for normal callers and direct user requests.
 
 ### Step 1: Check for API Key
 
-Check whether `${CLAUDE_PLUGIN_DATA}/.env` file exists and contains the API key:
+Check whether `$HOME/.fm-agent-plugin/.env` file exists and contains the API key:
 
 ```bash
-cat ${CLAUDE_PLUGIN_DATA}/.env
+cat $HOME/.fm-agent-plugin/.env
 ```
 
 If the file or the API key is missing, stop execution and ask the user to run `fm-agent:config` to set up configuration.
@@ -79,23 +79,23 @@ If the directory does not exist, proceed to Step 3 without `--resume`.
 
 ### Step 3: Run FM-Agent Analysis
 
-Run FM-Agent from the plugin data directory (`${CLAUDE_PLUGIN_DATA}/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
+Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
 
 Pick the command based on the arguments:
 
 **Full analysis, with resume:**
 ```bash
-source ${CLAUDE_PLUGIN_DATA}/.env && python3 ${CLAUDE_PLUGIN_DATA}/FM-Agent/main.py ./ --resume
+source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --resume
 ```
 
 **Full analysis, without resume:**
 ```bash
-source ${CLAUDE_PLUGIN_DATA}/.env && python3 ${CLAUDE_PLUGIN_DATA}/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./
 ```
 
 **Incremental analysis (commit id supplied):**
 ```bash
-source ${CLAUDE_PLUGIN_DATA}/.env && python3 ${CLAUDE_PLUGIN_DATA}/FM-Agent/main.py ./ --incremental <commit-id>
+source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <commit-id>
 ```
 
 Incremental mode is mutually exclusive with `--resume`: when a commit id is supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists. Incremental runs are scoped by the commit, not by the prior run's progress.
@@ -122,7 +122,7 @@ This mode exists so the caller can treat one FM-Agent run as one deterministic v
 Use the same prerequisite check as in direct-user mode:
 
 ```bash
-cat ${CLAUDE_PLUGIN_DATA}/.env
+cat $HOME/.fm-agent-plugin/.env
 ```
 
 If the file or API key is missing, stop immediately and report failure to the caller.
@@ -141,10 +141,10 @@ Do not offer `--resume`. Do not attempt to continue a previous run. The orchestr
 
 ### Step 3: Run Exactly One Full-Project Verification Round
 
-Run FM-Agent from the plugin data directory (`${CLAUDE_PLUGIN_DATA}/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
+Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
 
 ```bash
-source ${CLAUDE_PLUGIN_DATA}/.env && python3 ${CLAUDE_PLUGIN_DATA}/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && python3 $HOME/.fm-agent-plugin/FM-Agent/main.py ./
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.
@@ -186,4 +186,4 @@ For orchestration mode, "success" means:
 Anything else is "failure".
 
 ## Reference Files
-- **`${CLAUDE_PLUGIN_DATA}/FM-Agent/main.py`** - Execution pipeline for FM-Agent analysis
+- **`$HOME/.fm-agent-plugin/FM-Agent/main.py`** - Execution pipeline for FM-Agent analysis

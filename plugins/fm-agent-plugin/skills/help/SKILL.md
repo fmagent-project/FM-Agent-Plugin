@@ -1,5 +1,5 @@
 ---
-name: FM-Agent Help
+name: FM-Agent-Help
 description: Use when the user asks to "fm-agent help", "how to use fm-agent", "fm-agent usage", "fm-agent commands", or needs information about FM-Agent plugin capabilities.
 version: 0.2.0
 ---
@@ -8,7 +8,7 @@ Provide help and usage information for the FM-Agent plugin.
 
 ## Overview
 
-This plugin integrates FM-Agent into Claude Code for automated code reasoning and bug detection. FM-Agent uses LLM-based Hoare-style verification to analyze codebases.
+This plugin integrates FM-Agent into Claude Code or codex for automated code reasoning and bug detection. FM-Agent uses LLM-based Hoare-style verification to analyze codebases.
 
 ## Available Commands
 
@@ -19,20 +19,20 @@ This plugin integrates FM-Agent into Claude Code for automated code reasoning an
 | `/fm-agent:run` | Execute FM-Agent analysis on current project (background) |
 | `/fm-agent:diagnose` | View bug analysis results |
 | `/fm-agent:auto-fix` | Run verification-repair loop for the whole codebase |
-| `/fm-agent:export` | Export the Claude Code conversation after a git commit |
+| `/fm-agent:export` | Export current conversation after a git commit |
 | `/fm-agent:help` | Show help information |
 
 ## install
 
-Clone FM-Agent from official repository to the plugin data directory (`${CLAUDE_PLUGIN_DATA}/FM-Agent/`):
+Clone FM-Agent from official repository to the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent/`):
 ```bash
 git clone https://github.com/fmagent-project/FM-Agent.git
 ```
-Then run `${CLAUDE_PLUGIN_DATA}/FM-Agent/install.sh` to install dependencies.
+Then run `$HOME/.fm-agent-plugin/FM-Agent/install.sh` to install dependencies.
 
 ## config
 
-Read and modify FM-Agent settings stored in `${CLAUDE_PLUGIN_DATA}/.env` (sourced at runtime via `source .env`).
+Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/.env` (sourced at runtime via `source .env`).
 
 Workflow:
 - If `.env` does not exist, create it with default values
@@ -49,7 +49,7 @@ Workflow:
 ## run
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
-- Verify `${CLAUDE_PLUGIN_DATA}/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - Accepts an optional git commit id argument intended for incremental analysis. **Incremental mode is not yet implemented** — when a commit id is supplied, the skill stops and asks whether to run a full-project analysis instead.
 - If `./fm_agent/` already exists, ask the user whether to **resume** or **start fresh**. **Resume is not yet implemented** — when chosen, the skill stops and asks whether to start fresh instead.
 - Launch as a background task so the session is not blocked
@@ -84,7 +84,7 @@ Session artifacts live under `./fm_agent_plugin/`:
 
 ## export
 
-Export the Claude Code conversation after a git commit completes. Runs automatically after each `git commit` Bash command — no manual invocation required.
+Export current conversation after a git commit completes. Runs automatically after each `git commit` Bash command — no manual invocation required.
 
 For each commit, the skill writes two files to `./fm_agent_plugin/` in the current project directory:
 - `export-<COMMIT_ID>.md` — Full transcript of conversation turns between this commit and the previous one (or session start, if this is the first in-session commit)

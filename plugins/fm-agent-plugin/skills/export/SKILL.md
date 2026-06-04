@@ -1,11 +1,11 @@
 ---
-name: Export Conversation
-description: Use this skill immediately after any git commit to export the Claude Code conversation. The skill runs automatically after each `git commit` Bash command — do NOT wait to be asked. Just run it right after the commit completes. It creates a transcript and summary of all work done since the previous commit, scoped to the files that changed. Essential for tracking incremental progress commit by commit. If multiple commits have been made in the session, use this skill after EACH commit to export that commit's conversation.
+name: FM-Agent-Export
+description: Use this skill immediately after any git commit to export current conversation. The skill runs automatically after each `git commit` Bash command — do NOT wait to be asked. Just run it right after the commit completes. It creates a transcript and summary of all work done since the previous commit, scoped to the files that changed. Essential for tracking incremental progress commit by commit. If multiple commits have been made in the session, use this skill after EACH commit to export that commit's conversation.
 version: 0.4.0
 allowed-tools: Write,Bash,AskUserQuestion,Skill
 ---
 
-Export the Claude Code conversation to `./fm_agent_plugin/` after a git commit is executed as a Bash command. Two output files are created: a full transcript and a summary.
+Export the conversation to `./fm_agent_plugin/` after a git commit is executed as a Bash command. Two output files are created: a full transcript and a summary.
 
 ## Overview
 
@@ -14,7 +14,7 @@ This skill runs automatically after any `git commit` Bash command completes. It 
 - The conversation turns between the previous commit and the new commit
 - A concise summary of the user's goal, decisions made, and code changes
 
-Output files use the commit hash as identifier and are written to the **current project directory where Claude Code is running** (not the plugin directory): `export-<COMMIT_ID>.md` and `export-<COMMIT_ID>-summary.md` in the `./fm_agent_plugin/` subdirectory.
+Output files use the commit hash as identifier and are written to the **current project directory where Claude Code or codex is running** (not the plugin directory): `export-<COMMIT_ID>.md` and `export-<COMMIT_ID>-summary.md` in the `./fm_agent_plugin/` subdirectory.
 
 If no git commit has been executed in the current session, do NOT run this skill — return a message saying there's no commit to export to.
 
@@ -31,7 +31,7 @@ git rev-parse --short HEAD
 
 Determine whether this is the first `git commit` Bash command in the current session by checking the current session context for any earlier successful `git commit` Bash command before the one that just finished.
 
-- If no earlier successful `git commit` Bash command appears in the current session context, this is the first commit in the current session. There is no earlier in-session commit boundary. Use the session start as the previous reference, meaning the beginning of the current Claude Code conversation in this session. Scope the export to all conversation turns from session start up to this commit.
+- If no earlier successful `git commit` Bash command appears in the current session context, this is the first commit in the current session. There is no earlier in-session commit boundary. Use the session start as the previous reference, meaning the beginning of the current conversation in this session. Scope the export to all conversation turns from session start up to this commit.
 - If this is not the first commit in the current session, get the previous commit hash for scoping the conversation:
 ```bash
 git rev-parse --short HEAD~1
@@ -45,7 +45,7 @@ The commit id will be used in the filename to uniquely identify the conversation
 Walk through the conversation context between the current new commit and its previous commit, and write it to `./fm_agent_plugin/export-<COMMIT_ID>.md` in a readable plain-text format.
 
 ```md
-# Claude Code Conversation
+# Agent Conversation
 
 ## Date: <current date>
 
@@ -55,11 +55,11 @@ Walk through the conversation context between the current new commit and its pre
 
 **User:** <user message>
 
-**Claude:** <claude response>
+**Agent:** <agent response>
 
 ---
 
-**Claude:** (runs `some command`)
+**Agent:** (runs `some command`)
 
 **Tool output:** [output of the command]
 
@@ -67,12 +67,12 @@ Walk through the conversation context between the current new commit and its pre
 
 **User:** <user message>
 
-**Claude:** <claude response>
+**Agent:** <agent response>
 ```
 
 - Write ALL conversation turns that occurred between the new commit and its previous commit
 - Include tool calls (Bash, Read, Edit, etc.) and their outputs where relevant to the work
-- Separate each user/claude exchange with `---`
+- Separate each user/agent exchange with `---`
 - Keep tool output concise — omit very long outputs, summarize if needed
 - Do not fabricate content — only write what appears in the conversation context
 

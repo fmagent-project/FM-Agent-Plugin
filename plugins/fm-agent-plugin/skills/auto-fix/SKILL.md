@@ -1,5 +1,5 @@
 ---
-name: FM-Agent Auto-Fix
+name: FM-Agent-Auto-Fix
 description: Use when the user asks to run the FM-Agent full-project verification-repair loop for the current project.
 version: 0.1.0
 allowed-tools: Write,Bash,AskUserQuestion,Skill,Task

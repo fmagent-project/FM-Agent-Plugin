@@ -1,5 +1,5 @@
 ---
-name: FM-Agent Diagnose
+name: FM-Agent-Diagnose
 description: Use when the user asks to "diagnose fm-agent", "show bugs", "view fm-agent results", "check bug reports", or wants to analyze FM-Agent output.
 version: 0.1.0
 allowed-tools: Read, Glob

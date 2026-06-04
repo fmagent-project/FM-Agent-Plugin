@@ -1,6 +1,6 @@
-# Claude Code Plugin of FM-Agent
+# FM-Agent Plugin
 
-This plugin integrates [FM-Agent](https://github.com/fmagent-project/FM-Agent) into Claude Code for automated code reasoning and bug repair.
+This plugin integrates [FM-Agent](https://github.com/fmagent-project/FM-Agent) into Claude Code or codex for automated code reasoning and bug repair.
 
 ## Prerequisites
 
@@ -27,15 +27,15 @@ This plugin integrates [FM-Agent](https://github.com/fmagent-project/FM-Agent) i
 
 ### install
 
-Clone FM-Agent from official repository to the plugin data directory (`${CLAUDE_PLUGIN_DATA}/FM-Agent/`):
+Clone FM-Agent from official repository to the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent/`):
 ```bash
 git clone https://github.com/fmagent-project/FM-Agent.git
 ```
-Then run `${CLAUDE_PLUGIN_DATA}/FM-Agent/install.sh` to install dependencies.
+Then run `$HOME/.fm-agent-plugin/FM-Agent/install.sh` to install dependencies.
 
 ### config
 
-Read and modify FM-Agent settings stored in `${CLAUDE_PLUGIN_DATA}/.env` (sourced at runtime via `source .env`).
+Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/.env` (sourced at runtime via `source .env`).
 
 Workflow:
 - If `.env` does not exist, create it with default values
@@ -70,7 +70,7 @@ Session artifacts live under `./fm_agent_plugin/`:
 ### run
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
-- Verify `${CLAUDE_PLUGIN_DATA}/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - If `./fm_agent/` already exists, ask the user whether to **resume** or **start fresh**. **Resume (`--resume`) is not yet implemented** — when chosen, the skill stops and asks the user whether to start fresh instead.
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
