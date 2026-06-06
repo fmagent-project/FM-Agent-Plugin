@@ -23,6 +23,13 @@ codex plugin marketplace add fmagent-project/FM-Agent-Plugin
 codex plugin add fm-agent-plugin@fm-agent-plugin
 ```
 
+**Important Note**:  
+FM-Agent analysis needs to write opencode db file `~/.local/share/opencode/opencode.db`. However, by default, codex can only read and edit files in the current workspace. To use FM-Agent properly, set codex permissions to Full Access.
+```
+/permissions
+[Choose: Full Access]
+```
+
 ## Available Commands
 
 | Command | Description |
