@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Help
 description: Use when the user asks to "fm-agent help", "how to use fm-agent", "fm-agent usage", "fm-agent commands", or needs information about FM-Agent plugin capabilities.
-version: 0.2.4
+version: 0.2.5
 ---
 
 Provide help and usage information for the FM-Agent plugin.
@@ -51,11 +51,11 @@ Workflow:
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - Optionally runs incremental analysis with an intent file (`--incremental <intent-file>`), or with a generated intent file when `--incremental` is supplied without a file. Generated intent combines export summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`.
-- If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (discard and re-run). 
+- If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (run without `--resume`; FM-Agent handles prior-output cleanup).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
 
-The skill also exposes an **orchestration mode** used exclusively by `/fm-agent:auto-fix` to run a single deterministic full-project verification round synchronously.
+The skill also exposes an **orchestration mode** used exclusively by `/fm-agent:auto-fix` to run a single deterministic verification round synchronously.
 
 ## diagnose
 
@@ -70,7 +70,7 @@ Run the FM-Agent verification-repair-review loop with `/fm-agent:auto-fix <max-i
 
 Usage and constraints:
 - The loop starts from the current project working tree
-- The loop runs one full-project FM-Agent verification round first; incremental verification is not allowed in auto-fix mode
+- The loop runs one FM-Agent verification round first: full-project analysis if `fm_agent/` is missing, or incremental analysis if `fm_agent/` and `fm_agent/version.log` exist
 - If FM-Agent reports bugs, the plugin launches one dedicated coding-agent repair sub-session for the full bug batch
 - After each repair round, the plugin launches one dedicated reviewer sub-session to decide whether the reported bugs are fixed
 - If the reviewer passes the repair, the loop exits; if the reviewer returns feedback, the next coding-agent round receives that feedback and continues repairing

@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run
 description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode; the intent file may be supplied or generated from exported commit summaries.
-version: 0.4.3
+version: 0.4.5
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -29,15 +29,15 @@ Rules:
 This file defines two explicit procedures:
 
 - **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with a supplied or generated intent file.
-- **Orchestration mode:** a dedicated one-round verification procedure that `fm-agent:auto-fix` must follow when it needs deterministic full-project verification.
+- **Orchestration mode:** a dedicated one-round verification procedure that `fm-agent:auto-fix` must follow when it needs deterministic verification.
 
 Mode selection is by entrypoint, not by implicit runtime caller detection:
 
 - Normal `fm-agent:run` usage follows **default direct-user mode**.
-- `fm-agent:auto-fix` must follow the **orchestration mode** section when it needs one full verification round.
+- `fm-agent:auto-fix` must follow the **orchestration mode** section when it needs one verification round.
 - Do **not** infer orchestration mode from the presence or absence of incremental arguments alone.
 
-In orchestration mode, ignore the optional incremental arguments entirely. `fm-agent:auto-fix` always requires full-project verification, never incremental verification.
+In orchestration mode, use the optional incremental arguments only when the caller explicitly requests incremental verification. `fm-agent:auto-fix` chooses full-project verification for first analysis and incremental verification when prior analysis state exists.
 
 ## Prerequisites
 
@@ -167,7 +167,7 @@ If the directory exists, use AskUserQuestion to confirm with the user how to pro
 
 Based on the user's choice:
 - "Resume" → run with the `--resume` flag (see Step 5). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
-- "Start fresh" → remove the existing directory (`rm -rf fm_agent`) and run without `--resume`
+- "Start fresh" → run without `--resume`. Do not delete the existing `fm_agent/` directory manually; FM-Agent handles cleanup for a fresh full analysis.
 
 If the directory does not exist, proceed to Step 5 without `--resume`.
 
@@ -227,24 +227,31 @@ Use the same pending-change commit procedure as in direct-user mode before reset
 
 If committing fails, report failure to the caller and do not run FM-Agent verification.
 
-### Step 3: Reset Prior Full-Run Output
+### Step 3: Prepare Verification Mode
 
-To make the round deterministic, remove any existing `fm_agent/` directory before starting the run.
+If orchestration mode was invoked with incremental mode, use the same incremental intent-file preparation procedure as direct-user mode:
 
-If `fm_agent/` exists:
+- If an intent file was supplied, use it.
+- If no intent file was supplied, generate it from exported summaries using `fm_agent/version.log` and `HEAD`.
 
-```bash
-rm -rf fm_agent
-```
+If incremental intent preparation fails, report failure to the caller and do not run FM-Agent verification.
 
-Do not offer `--resume`. Do not attempt to continue a previous run. The orchestration caller needs one fresh full-project round with artifacts produced by this invocation.
+Do not offer `--resume`. Do not attempt to continue a previous run. For full-project verification, run fresh without manually removing `fm_agent/`; FM-Agent handles prior-output cleanup when it starts without `--resume`.
 
-### Step 4: Run Exactly One Full-Project Verification Round
+### Step 4: Run Exactly One Verification Round
 
-Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
+Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`).
+
+For full-project verification, run with no incremental flag and no resume flag:
 
 ```bash
 source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
+```
+
+For incremental verification, run with the prepared intent file and no resume flag:
+
+```bash
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file>
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.
@@ -275,12 +282,12 @@ Return control to `fm-agent:auto-fix` only after the Step 5 completion check fin
 
 The caller learns the result from this skill's final report for the invocation:
 
-- **Success:** state that one full-project verification round completed successfully and that `fm_agent/bug_validation/summary.json` is ready to read.
+- **Success:** state that one verification round completed successfully, include whether it was full-project or incremental, and state that `fm_agent/bug_validation/summary.json` is ready to read.
 - **Failure:** state that the verification round failed, include whether the FM-Agent command failed or `fm_agent/bug_validation/summary.json` was missing/unreadable, and do not describe the summary as ready.
 
 For orchestration mode, "success" means:
 
-1. the full-project FM-Agent command finished without error, and
+1. the FM-Agent command finished without error, and
 2. `fm_agent/bug_validation/summary.json` passed the readiness check
 
 Anything else is "failure".

@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Auto-Fix
-description: Use when the user asks to run the FM-Agent full-project verification-repair loop for the current project.
-version: 0.1.0
+description: Use when the user asks to run the FM-Agent verification-repair loop for the current project.
+version: 0.1.1
 allowed-tools: Write,Bash,AskUserQuestion,Skill,Task
 ---
 
@@ -9,9 +9,9 @@ Run the FM-Agent auto-fix orchestration loop for the current project.
 
 ## Overview
 
-This skill owns the verification-repair-review loop for FM-Agent. It enforces that only one auto-fix session is active in the repository, runs FM-Agent in **full-project mode only**, collects bug artifacts from `fm_agent/bug_validation/`, dispatches one dedicated coding-agent sub-session per repair round, dispatches one dedicated reviewer sub-session after each repair round, and records machine-readable and human-readable session state under `./fm_agent_plugin/`.
+This skill owns the verification-repair-review loop for FM-Agent. It enforces that only one auto-fix session is active in the repository, chooses full-project or incremental FM-Agent verification based on prior analysis state, collects bug artifacts from `fm_agent/bug_validation/`, dispatches one dedicated coding-agent sub-session per repair round, dispatches one dedicated reviewer sub-session after each repair round, and records machine-readable and human-readable session state under `./fm_agent_plugin/`.
 
-The reviewer agent's structured return envelope is the control signal for the loop after the initial FM-Agent full-project verification. Do **not** infer the repair outcome from `git diff` or the coding agent's self-report.
+The reviewer agent's structured return envelope is the control signal for the loop after the initial FM-Agent verification. Do **not** infer the repair outcome from `git diff` or the coding agent's self-report.
 
 ## Argument: `<max-iterations>`
 
@@ -98,9 +98,20 @@ If no active session exists:
 
 Do not require a commit id. Do not read or validate a commit message. The loop always starts from the current project working tree.
 
-## Step 2: Run One Full-Project Verification Round
+## Step 2: Run One Verification Round
 
-This loop always uses FM-Agent full-project verification. Incremental verification is not allowed in auto-fix mode.
+Before running FM-Agent, check whether the project has been analyzed before:
+
+```bash
+[ -d "fm_agent" ] && echo "FM_AGENT_EXISTS" || echo "FM_AGENT_MISSING"
+[ -r "fm_agent/version.log" ] && echo "VERSION_LOG_EXISTS" || echo "VERSION_LOG_MISSING"
+```
+
+Verification mode selection:
+
+- If `fm_agent/` does not exist, run full-project analysis.
+- If `fm_agent/` exists and `fm_agent/version.log` exists and is readable, run incremental analysis.
+- If `fm_agent/` exists but `fm_agent/version.log` is missing or unreadable, treat the prior analysis state as incomplete and run full-project analysis.
 
 Before verification:
 
@@ -108,8 +119,14 @@ Before verification:
 - set `status=verifying`
 - write `last_verification_started_at`
 - append a verification header to the human-readable log
+- record whether the selected verification mode is `full-project` or `incremental`
 
-Invoke `fm-agent:run` as the execution primitive for this step and require it to follow its documented **orchestration mode** for one full-project verification round. Do not use the default direct-user background flow from `fm-agent:run`; the auto-fix orchestrator depends on the run skill's synchronous orchestration-mode completion and readiness contract before continuing.
+Invoke `fm-agent:run` as the execution primitive for this step.
+
+- For full-project analysis, require `fm-agent:run` to follow its documented **orchestration mode** for one full-project verification round.
+- For incremental analysis, invoke `fm-agent:run --incremental` without an intent file so the run skill generates the intent file from exported summaries between the last analyzed commit in `fm_agent/version.log` and the current `HEAD`.
+
+Do not use the default direct-user background flow from `fm-agent:run`; the auto-fix orchestrator depends on the run skill's synchronous completion and artifact-readiness contract before continuing.
 
 If the FM-Agent run fails, or if the round completes without producing readable verification artifacts, update the session to:
 
