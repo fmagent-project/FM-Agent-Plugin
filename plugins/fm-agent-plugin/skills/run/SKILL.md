@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run
-description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode, which requires an intent file describing the goal of the change.
-version: 0.4.2
+description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode; the intent file may be supplied or generated from exported commit summaries.
+version: 0.4.3
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -13,12 +13,13 @@ This skill runs FM-Agent from the plugin data directory `$HOME/.fm-agent-plugin/
 
 ## Arguments (optional, incremental mode)
 
-Incremental mode requires one value:
+Incremental mode is selected by the `--incremental` flag. The flag may be used with or without a value:
 - `<intent-file>` (`--incremental`): path to a text file describing the goal of the change being analyzed.
 
 Rules:
-- **Neither supplied:** run full-project analysis.
-- **Intent file supplied:** run incremental analysis.
+- **No incremental flag supplied:** run full-project analysis.
+- **Incremental flag with intent file supplied:** run incremental analysis with that intent file.
+- **Incremental flag supplied without an intent file:** generate the intent file from exported commit summaries before running incremental analysis.
 - Incremental mode maps to `--incremental <intent-file>` only.
 - If the user supplies extra incremental arguments beyond the intent file, ignore them and run with only the intent file.
 
@@ -27,7 +28,7 @@ Rules:
 
 This file defines two explicit procedures:
 
-- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with an intent file.
+- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with a supplied or generated intent file.
 - **Orchestration mode:** a dedicated one-round verification procedure that `fm-agent:auto-fix` must follow when it needs deterministic full-project verification.
 
 Mode selection is by entrypoint, not by implicit runtime caller detection:
@@ -82,9 +83,74 @@ Rules:
 - If the commit fails, stop execution and report the failure; do not run FM-Agent analysis on an uncommitted working tree.
 - If there are no uncommitted project changes, continue without creating a commit.
 
-### Step 3: Check for Existing Output Directory
+### Step 3: Prepare Incremental Intent File
 
-Skip this step entirely if incremental arguments were supplied — incremental runs do not interact with the prior full-run state.
+Skip this step entirely unless incremental mode was requested.
+
+If the user supplied an intent file, use that file as `<intent-file>` and continue to Step 4.
+
+If incremental mode was requested without an intent file, generate one from the export summaries for commits between the last analyzed commit and the current commit.
+
+1. Read the base commit id from the last line of `fm_agent/version.log`:
+
+```bash
+tail -n 1 fm_agent/version.log
+```
+
+2. Read the current commit id from `HEAD`:
+
+```bash
+git rev-parse --short HEAD
+```
+
+3. Enumerate commits after the base commit through the current `HEAD`, in chronological order:
+
+```bash
+git rev-list --reverse <base-commit>..HEAD
+```
+
+4. For each commit from Step 3, resolve its short id and require the matching exported summary file:
+
+```bash
+git rev-parse --short <commit>
+test -r "fm_agent_plugin/export-<short-commit>-summary.md"
+```
+
+5. Concatenate all matching summary files into a generated intent file. Use the short form of the base and current commit ids in the file name:
+
+```bash
+mkdir -p fm_agent_plugin
+{
+  echo "# Incremental FM-Agent Intent"
+  echo
+  echo "Base analyzed commit: <base-commit>"
+  echo "Current commit: <current-commit>"
+  echo
+  echo "Generated from exported summaries in chronological order."
+  echo
+  for commit in $(git rev-list --reverse <base-commit>..HEAD); do
+    short_commit=$(git rev-parse --short "$commit")
+    summary_file="fm_agent_plugin/export-${short_commit}-summary.md"
+    echo "## Commit ${short_commit}"
+    echo
+    cat "$summary_file"
+    echo
+    echo
+  done
+} > "fm_agent_plugin/incremental-intent-<base-short-commit>-to-<current-short-commit>.md"
+```
+
+Use the generated file as `<intent-file>` for Step 5.
+
+Rules:
+- If `fm_agent/version.log` is missing, empty, or unreadable, stop and report that incremental intent generation cannot determine the last analyzed commit.
+- If the base commit from `fm_agent/version.log` is not a valid ancestor reference for the current repository, stop and report the invalid base commit.
+- If there are no commits between the base commit and `HEAD`, stop and report that there are no exported summaries to combine.
+- If any required `fm_agent_plugin/export-<short-commit>-summary.md` file is missing or unreadable, stop and report the missing summary files; do not run FM-Agent with a partial generated intent file.
+
+### Step 4: Check for Existing Output Directory
+
+Skip this step entirely if incremental mode was requested — incremental runs do not interact with the prior full-run state.
 
 Otherwise, check whether the `fm_agent/` output directory already exists in the project directory:
 
@@ -100,12 +166,12 @@ If the directory exists, use AskUserQuestion to confirm with the user how to pro
   - Start fresh (Discard existing results and start a new analysis)
 
 Based on the user's choice:
-- "Resume" → run with the `--resume` flag (see Step 4). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
+- "Resume" → run with the `--resume` flag (see Step 5). Do not delete the existing `fm_agent/` directory; the run continues from the prior run's progress.
 - "Start fresh" → remove the existing directory (`rm -rf fm_agent`) and run without `--resume`
 
-If the directory does not exist, proceed to Step 4 without `--resume`.
+If the directory does not exist, proceed to Step 5 without `--resume`.
 
-### Step 4: Run FM-Agent Analysis
+### Step 5: Run FM-Agent Analysis
 
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
 
@@ -126,15 +192,15 @@ source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Ag
 source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file>
 ```
 
-Incremental mode is mutually exclusive with `--resume`: when an incremental intent file is supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists.
+Incremental mode is mutually exclusive with `--resume`: when incremental mode was requested, do not also pass `--resume`, even if a previous `fm_agent/` directory exists.
 
-**Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 5 can poll it for completion.
+**Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 6 can poll it for completion.
 
-### Step 5: Notify User on Completion
+### Step 6: Notify User on Completion
 
 After launching the background task, do **not** wait synchronously. Prefer handing off completion monitoring to a separate polling helper so the user can be notified when the run finishes.
 
-- If the platform provides a polling helper such as a `loop` skill, invoke that helper and pass it the background task handle from Step 4. The helper should poll the task status at an interval appropriate to the expected runtime (for example, 5 minutes for small projects, 15-30 minutes for large ones, or 10 minutes by default)
+- If the platform provides a polling helper such as a `loop` skill, invoke that helper and pass it the background task handle from Step 5. The helper should poll the task status at an interval appropriate to the expected runtime (for example, 5 minutes for small projects, 15-30 minutes for large ones, or 10 minutes by default)
 - If no polling helper is available on the platform, return immediately after launch and tell the user that FM-Agent is running in the background, and that they can run `/fm-agent:diagnose` after the run finishes.
 
 This keeps the direct-user mode actionable even on platforms that do not expose a task-status facility inside this skill itself.

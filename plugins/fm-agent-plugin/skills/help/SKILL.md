@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Help
 description: Use when the user asks to "fm-agent help", "how to use fm-agent", "fm-agent usage", "fm-agent commands", or needs information about FM-Agent plugin capabilities.
-version: 0.2.3
+version: 0.2.4
 ---
 
 Provide help and usage information for the FM-Agent plugin.
@@ -50,7 +50,7 @@ Workflow:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- Optionally runs incremental analysis with an intent file (`--incremental <intent-file>`).
+- Optionally runs incremental analysis with an intent file (`--incremental <intent-file>`), or with a generated intent file when `--incremental` is supplied without a file. Generated intent combines export summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`.
 - If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (discard and re-run). 
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.

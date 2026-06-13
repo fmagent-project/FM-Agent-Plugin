@@ -87,7 +87,7 @@ Session artifacts live under `./fm_agent_plugin/`:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- Optional incremental analysis is supported with an intent file: `/fm-agent:run --incremental <intent-file>`.
+- Optional incremental analysis is supported with an intent file: `/fm-agent:run --incremental <intent-file>`. If `/fm-agent:run --incremental` is used without a file, the skill generates one from exported summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`.
 - For full-project analysis, if `./fm_agent/` already exists, ask the user whether to **resume** (continue with `--resume`) or **start fresh** (discard the existing `fm_agent/` directory and re-run).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
