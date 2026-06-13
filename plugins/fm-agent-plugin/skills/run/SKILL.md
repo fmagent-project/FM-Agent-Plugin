@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run
-description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode, which analyzes only the functions changed between a base commit and the current working tree; incremental mode requires an intent file describing the goal of the change and a base commit id.
-version: 0.4.1
+description: Use when the user asks to "run fm-agent", "execute fm-agent", "analyze code with fm-agent", "start reasoning", or wants to run code analysis on the current project. Optionally runs in incremental mode, which requires an intent file describing the goal of the change.
+version: 0.4.2
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -13,21 +13,21 @@ This skill runs FM-Agent from the plugin data directory `$HOME/.fm-agent-plugin/
 
 ## Arguments (optional, incremental mode)
 
-Incremental mode requires two values, in the same order as FM-Agent's CLI:
+Incremental mode requires one value:
 - `<intent-file>` (`--incremental`): path to a text file describing the goal of the change being analyzed.
-- `<base-commit>` (`--old-commit`): the commit id (short or full SHA) to diff the current working tree against.
 
 Rules:
 - **Neither supplied:** run full-project analysis.
-- **Only one of the two supplied:** ask the user for the missing value before running. Incremental mode needs both; FM-Agent errors out if `--incremental` is set without `--old-commit`.
-- Incremental mode maps to `--incremental <intent-file> --old-commit <base-commit>`; both flags are required together.
+- **Intent file supplied:** run incremental analysis.
+- Incremental mode maps to `--incremental <intent-file>` only.
+- If the user supplies extra incremental arguments beyond the intent file, ignore them and run with only the intent file.
 
 
 ## Invocation Modes
 
 This file defines two explicit procedures:
 
-- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with an intent file and a base commit.
+- **Default direct-user mode:** the normal `/fm-agent:run` procedure for direct user invocations, including optional incremental analysis with an intent file.
 - **Orchestration mode:** a dedicated one-round verification procedure that `fm-agent:auto-fix` must follow when it needs deterministic full-project verification.
 
 Mode selection is by entrypoint, not by implicit runtime caller detection:
@@ -121,12 +121,12 @@ source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Ag
 source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
 ```
 
-**Incremental analysis (intent file + base commit supplied):**
+**Incremental analysis (intent file supplied):**
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file> --old-commit <base-commit>
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file>
 ```
 
-Incremental mode is mutually exclusive with `--resume`: when incremental arguments are supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists. Incremental runs are scoped by the base commit, not by the prior run's progress.
+Incremental mode is mutually exclusive with `--resume`: when an incremental intent file is supplied, do not also pass `--resume`, even if a previous `fm_agent/` directory exists.
 
 **Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time — from several minutes for small codebases to hours for large ones — so blocking the session is not acceptable. Capture the returned `task_id` so Step 5 can poll it for completion.
 

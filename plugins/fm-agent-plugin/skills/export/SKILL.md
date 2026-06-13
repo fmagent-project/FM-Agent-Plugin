@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Export
 description: Use this skill immediately after any git commit to export current conversation. The skill runs automatically after each `git commit` Bash command — do NOT wait to be asked. Just run it right after the commit completes. It creates a transcript and summary of all work done since the previous commit, scoped to the files that changed. Essential for tracking incremental progress commit by commit. If multiple commits have been made in the session, use this skill after EACH commit to export that commit's conversation.
-version: 0.5.0
+version: 0.5.2
 allowed-tools: Write,Bash,AskUserQuestion,Skill
 ---
 
@@ -117,35 +117,3 @@ When writing `What was done` and `Code changes`:
 - DO NOT think in terms of code diffs or line changes — focus on the user's intent and the high-level design decisions
 - DO NOT include any information that is irrelevant to the user's intent and the overall goal of this commit, such as building process, test outputs, error messages, off-topic discussions
 
-### 4. Offer incremental FM-Agent analysis
-
-The auto-fix loop is manually triggered and no longer branches from commit messages. Preserve the current incremental FM-Agent behavior for all commits:
-
-- Ask the user whether they want to run FM-Agent on just this commit's changes — i.e. verify the before/after of this commit, the diff between the parent version `<COMMIT_ID>~1` and the version recorded by `<COMMIT_ID>`. FM-Agent's incremental mode only takes a base commit (`--old-commit`) and always uses the **current working tree** as the new side; there is no flag to pin the new commit. So this equals "this commit's changes" only when the working tree still matches `<COMMIT_ID>` exactly — which is the case right after a clean commit. Incremental mode also needs an intent file describing the goal of the change; reuse the summary this export just wrote (`./fm_agent_plugin/export-<COMMIT_ID>-summary.md`), which already captures the user's intent.
-
-Preconditions — if any fails, skip the offer and tell the user incremental is not applicable here:
-- `<COMMIT_ID>` must have a parent (`git rev-parse <COMMIT_ID>~1` succeeds); the very first commit in a repo has no base to diff against.
-- `<COMMIT_ID>` must be the current HEAD (`git rev-parse --short HEAD` equals `<COMMIT_ID>`). FM-Agent compares against the working tree, so verifying an older commit (e.g. `HEAD~2`) would diff its parent against the *current* tree and pull in every later commit's changes — not just this commit's. Only the latest commit can be verified this way.
-- The working tree must be clean (`git status --porcelain` produces no output). Any uncommitted change makes the working tree differ from `<COMMIT_ID>`, so the diff would no longer be this commit's before/after.
-- A previous full FM-Agent run must exist under `./fm_agent/` (incremental builds on the prior full run; without it FM-Agent falls back to a full run).
-
-Use AskUserQuestion:
-
-- Question: "Run FM-Agent incremental analysis on the changes introduced by commit `<COMMIT_ID>`?"
-- Options:
-  - Yes (Run `/fm-agent:run` scoped to this commit's changes)
-  - No (Skip — exports are saved, the user can run analysis later)
-
-If the user selects "Yes", invoke the `fm-agent:run` skill with the export summary as the intent file and the parent commit as the base. First resolve the parent into a concrete commit hash so the value passed to `--old-commit` is a plain SHA, not a `~1` revision expression:
-
-```bash
-git rev-parse --short <COMMIT_ID>~1
-```
-
-Use that resolved hash as `<PARENT_SHA>`. The commit id matches the export filenames, making the analysis output easy to correlate with the export:
-
-```
-Skill(skill="fm-agent:run", args="--incremental ./fm_agent_plugin/export-<COMMIT_ID>-summary.md --old-commit <PARENT_SHA>")
-```
-
-If the user selects "No", end the skill without further action — the export files are already saved.

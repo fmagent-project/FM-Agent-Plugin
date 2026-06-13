@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Help
 description: Use when the user asks to "fm-agent help", "how to use fm-agent", "fm-agent usage", "fm-agent commands", or needs information about FM-Agent plugin capabilities.
-version: 0.2.1
+version: 0.2.3
 ---
 
 Provide help and usage information for the FM-Agent plugin.
@@ -50,7 +50,7 @@ Workflow:
 
 Execute FM-Agent from the plugin data directory to analyze the current project directory (`./`):
 - Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
-- Optionally runs incremental analysis: supply an intent file and a base commit, and FM-Agent analyzes only the functions changed between that commit and the working tree (`--incremental <intent-file> --old-commit <base-commit>`).
+- Optionally runs incremental analysis with an intent file (`--incremental <intent-file>`).
 - If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (discard and re-run). 
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -90,7 +90,7 @@ For each commit, the skill writes two files to `./fm_agent_plugin/` in the curre
 - `export-<COMMIT_ID>.md` — Full transcript of conversation turns between this commit and the previous one (or session start, if this is the first in-session commit)
 - `export-<COMMIT_ID>-summary.md` — Concise summary of the user's intent, decisions, and goal-level description of code changes
 
-After writing the export, the skill asks the user whether to run incremental FM-Agent analysis on the just-committed changes. If accepted, it invokes `/fm-agent:run --incremental ./fm_agent_plugin/export-<COMMIT_ID>-summary.md --old-commit <PARENT_SHA>`. If multiple commits are made in a single session, the skill runs once per commit, scoping each export to the conversation turns belonging to that commit.
+After writing the export files, the export skill ends. It does not offer or launch incremental FM-Agent analysis.
 
 ## Prerequisites
 
