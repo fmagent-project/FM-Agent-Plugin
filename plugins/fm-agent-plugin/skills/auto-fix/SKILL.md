@@ -155,7 +155,17 @@ Record:
 - `last_bug_count`
 - `last_bug_ids`
 
-If `summary.json` is missing, unreadable, or malformed, treat that as `verification_failed`.
+If `summary.json` is missing after a successful verification round and `fm_agent/bug_validation/` contains no per-bug artifacts, treat the round as clean:
+
+- record `last_bug_count=0`
+- record `last_bug_ids=[]`
+- update `status=completed`
+- set `stop_reason=no_bugs`
+- append the clean result to `./fm_agent_plugin/auto-fix-<session-id>.md`, noting that FM-Agent produced no `summary.json` because no bugs were found
+- clear `./fm_agent_plugin/auto-fix-active.json` if it still points to the current session
+- stop
+
+If `summary.json` exists but is unreadable or malformed, or if `summary.json` is missing while per-bug artifacts are present, treat that as `verification_failed`.
 
 If `summary.json` reports zero bugs:
 

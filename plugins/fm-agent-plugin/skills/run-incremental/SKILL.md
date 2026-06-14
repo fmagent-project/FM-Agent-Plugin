@@ -196,22 +196,29 @@ This command exit is **not** the completion check by itself. A round is complete
 After the FM-Agent command exits, verify that:
 
 - the command exited successfully, and
-- `fm_agent/bug_validation/summary.json` exists and is readable
+- either `fm_agent/bug_validation/summary.json` exists and is readable, or `fm_agent/bug_validation/` contains no per-bug artifacts because FM-Agent found no bugs
 
 Use:
 
 ```bash
-[ -r "fm_agent/bug_validation/summary.json" ] && echo "READY" || echo "MISSING"
+if [ -r "fm_agent/bug_validation/summary.json" ]; then
+  echo "READY"
+elif find fm_agent/bug_validation -maxdepth 1 \( -name "*.result.json" -o -name "*.md" \) -print -quit 2>/dev/null | grep -q .; then
+  echo "MISSING"
+else
+  echo "NO_BUGS_NO_SUMMARY"
+fi
 ```
 
-- If both conditions hold, the incremental verification round succeeded and `fm_agent/bug_validation/summary.json` is ready for the caller to read immediately.
+- If the command succeeded and the check prints `READY`, the incremental verification round succeeded and `fm_agent/bug_validation/summary.json` is ready for the caller to read immediately.
+- If the command succeeded and the check prints `NO_BUGS_NO_SUMMARY`, the incremental verification round succeeded with no reported bugs. Tell the caller that no `summary.json` was produced because FM-Agent found no bugs.
 - If either condition fails, treat the round as failed. Do not claim that verification artifacts are ready.
 
 ### Step 6: Report Success vs Failure To The Caller
 
 Return control to `fm-agent:auto-fix` only after the Step 5 completion check finishes.
 
-- **Success:** state that one incremental verification round completed successfully and that `fm_agent/bug_validation/summary.json` is ready to read.
+- **Success:** state that one incremental verification round completed successfully. If the readiness check printed `READY`, say that `fm_agent/bug_validation/summary.json` is ready to read. If it printed `NO_BUGS_NO_SUMMARY`, say that no bugs were found and no `summary.json` was produced.
 - **Failure:** state that the incremental verification round failed, include whether the FM-Agent command failed or `fm_agent/bug_validation/summary.json` was missing/unreadable, and do not describe the summary as ready.
 
 ## Reference Files
