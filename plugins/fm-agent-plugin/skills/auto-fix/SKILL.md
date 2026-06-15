@@ -13,6 +13,8 @@ This skill owns the verification-repair-review loop for FM-Agent. It enforces th
 
 The reviewer agent's structured return envelope is the control signal for the loop after the initial FM-Agent verification. Do **not** infer the repair outcome from `git diff` or the coding agent's self-report.
 
+All repair and review work happens inside the isolated git worktree snapshot that FM-Agent's `--isolate` run created during verification, never in the real project working tree. Only after the reviewer passes does the loop merge the snapshot's repairs back into the real current branch, auto-resolving any conflicts. The real working tree stays untouched until that final merge.
+
 ## Argument: `<intent-msg>` (optional)
 
 This skill takes one optional argument:
@@ -45,6 +47,7 @@ The state file must contain at least:
 - `status`
 - `iteration`
 - `max_iterations`
+- `isolated_worktree`
 - `last_verification_started_at`
 - `last_verification_finished_at`
 - `last_bug_count`
@@ -71,6 +74,7 @@ Allowed stop reasons:
 - `verification_failed`
 - `repair_failed`
 - `review_failed`
+- `merge_conflict`
 - `session_conflict`
 
 ## Step 1: Enforce a Single Active Session
@@ -124,6 +128,7 @@ Before verification:
 - write `last_verification_started_at`
 - append a verification header to the human-readable log
 - record whether the selected verification mode is `full-project` or `incremental`
+- capture the current set of `fm_agent_wt_*` git worktrees as a baseline (`git worktree list --porcelain`), so this round's new snapshot can be identified afterwards
 
 Invoke the split run skills as the execution primitive for this step.
 
@@ -138,6 +143,23 @@ If the FM-Agent run fails, or if the round completes without producing readable 
 - `stop_reason=verification_failed`
 
 Then clear `./fm_agent_plugin/auto-fix-active.json` if it still points to the current session, append the failure to the human-readable log, and stop.
+
+### Locate the Isolated Worktree
+
+The verification round ran FM-Agent with `--isolate`, which froze the project into a throwaway git worktree snapshot under a `fm_agent_wt_*` temp directory and left it on disk. All repair and review work for this session happens in that snapshot, so identify it now by diffing against the baseline captured before verification:
+
+```bash
+git worktree list --porcelain | awk '/^worktree /{print $2}' | grep "/fm_agent_wt_"
+```
+
+The `fm_agent_wt_*` worktree present now but absent from the pre-verification baseline is this session's snapshot. If more than one new entry appears, pick the most recently modified. Record its path as `isolated_worktree` in the session state and use it as the workspace for every repair and review round.
+
+If no new `fm_agent_wt_*` worktree can be identified, the isolated run did not produce a reusable snapshot; treat the round as failed:
+
+- `status=failed`
+- `stop_reason=verification_failed`
+
+Append the failure to the human-readable log, clear the active-session lock if it still points to the current session, and stop.
 
 ## Step 3: Parse `summary.json`
 
@@ -216,6 +238,7 @@ The repair task passed to the coding agent must include:
 - `iteration`
 - `max_iterations`
 - `project_root`
+- `isolated_worktree`
 - `bug_count`
 - `bugs`
 - `review_feedback`
@@ -235,7 +258,7 @@ Each item in `bugs` must include:
 
 `workspace_rules` must explicitly state:
 
-- the agent may modify the current working tree
+- the agent must perform all edits inside the isolated worktree at `isolated_worktree`, never in the real project working tree
 - the agent must address the bug artifacts and, on later rounds, the reviewer feedback
 - the agent may decide that a reported bug does not require a code fix, but must explain that decision in `rationale` for reviewer evaluation
 - the agent must not create commits
@@ -301,6 +324,7 @@ The reviewer task must include:
 - `iteration`
 - `max_iterations`
 - `project_root`
+- `isolated_worktree`
 - `bug_count`
 - `bugs`
 - `coding_agent_summary`
@@ -312,8 +336,8 @@ Each item in `bugs` must include the same bug artifact metadata and contents pas
 
 `workspace_rules` must explicitly state:
 
-- the reviewer must inspect whether the current working tree fully fixes the reported bug batch
-- the reviewer may use the original bug artifacts, the coding-agent summary, and the current working tree
+- the reviewer must inspect whether the isolated worktree at `isolated_worktree` fully fixes the reported bug batch
+- the reviewer may use the original bug artifacts, the coding-agent summary, and the isolated worktree
 - the reviewer must not modify files
 - the reviewer must not create commits
 - the reviewer must not start FM-Agent verification or another repair round
@@ -366,11 +390,8 @@ After reading the envelope:
 
 - On `passed`:
   - set `last_review_outcome=passed`
-  - update `status=completed`
-  - set `stop_reason=review_passed`
   - append the round summary to `./fm_agent_plugin/auto-fix-<session-id>.md`
-  - clear `./fm_agent_plugin/auto-fix-active.json` if it still points to the current session
-  - stop
+  - continue to **Step 10** to merge the approved repairs from the isolated worktree back into the real working tree
 
 - On `needs_work`:
   - set `last_review_outcome=needs_work`
@@ -385,6 +406,50 @@ After reading the envelope:
   - append the failure summary to the human-readable log
   - clear `./fm_agent_plugin/auto-fix-active.json` if it still points to the current session
   - stop
+
+## Step 10: Merge the Repaired Snapshot Back
+
+Reached only after the reviewer returns `passed`. Until this point every repair lives in the isolated worktree recorded as `isolated_worktree`, and the real project working tree has not been touched.
+
+Bring the approved repairs into the real current branch. Stage everything in the snapshot except FM-Agent's own output, then apply it onto the real working tree as a three-way merge so any overlap with the current branch surfaces as standard conflict markers instead of a silent overwrite. Repairs are applied to the working tree only; this step does not create commits.
+
+```bash
+git -C "<isolated_worktree>" add -A -- . ':!fm_agent/**'
+git -C "<isolated_worktree>" diff --cached --binary > "<patch-file>"
+git -C "<project_root>" apply --3way --whitespace=nowarn "<patch-file>"
+```
+
+- If the apply succeeds with no conflict:
+  - update `status=completed`
+  - set `stop_reason=review_passed`
+  - append the merge result to the human-readable log
+  - remove the snapshot: `git -C "<project_root>" worktree remove --force "<isolated_worktree>"`
+  - clear `./fm_agent_plugin/auto-fix-active.json` if it still points to the current session
+  - stop
+
+- If the apply reports conflicts, auto-resolve them by dispatching exactly one dedicated conflict-resolver sub-session using the platform's agent-dispatch capability. The resolver task must include:
+  - `project_root`
+  - `isolated_worktree`
+  - the list of conflicted files
+  - `workspace_rules` stating: the resolver may edit only the conflicted files in the real working tree to reconcile the snapshot repairs with the current branch; it must remove every conflict marker; it must not create commits; it must not start FM-Agent or another repair round; it must return exactly one structured envelope `{ "outcome": "resolved" | "failed", "summary": ..., "...": ... }`.
+
+  Interpret the resolver envelope:
+
+  - On `resolved`:
+    - update `status=completed`
+    - set `stop_reason=review_passed`
+    - append the resolution summary to the human-readable log
+    - remove the snapshot worktree
+    - clear the active-session lock if it still points to the current session
+    - stop
+  - On `failed`, or if the resolver crashes or returns an invalid envelope:
+    - update `status=failed`
+    - set `stop_reason=merge_conflict`
+    - leave the conflict markers in the real working tree and report the conflicted file paths to the user
+    - keep the snapshot worktree so the user can inspect it, and report its path
+    - append the failure to the human-readable log
+    - clear the active-session lock if it still points to the current session
+    - stop
 
 ## Observability Requirements
 
@@ -405,3 +470,7 @@ Each round should append enough detail to `./fm_agent_plugin/auto-fix-<session-i
 For the terminal session record, also record the final `stop_reason`.
 
 The machine-readable state file should be updated at each transition so a future run can inspect whether a previous session already completed, failed terminally, or was interrupted.
+
+## Snapshot Lifecycle
+
+The isolated worktree recorded as `isolated_worktree` is reused across all repair rounds of the session. Remove it with `git -C "<project_root>" worktree remove --force "<isolated_worktree>"` whenever the session stops — including the early exits for `no_bugs`, `max_iterations`, `verification_failed`, `repair_failed`, and `review_failed` — except when `stop_reason=merge_conflict` left unresolved markers for the user; in that case keep the snapshot and report its path. Pruning the snapshot on every other terminal state prevents stale `fm_agent_wt_*` worktrees from accumulating and keeps the next session's worktree-baseline discovery unambiguous.

@@ -104,12 +104,12 @@ Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) 
 
 **Full analysis, with resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --resume
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate --resume
 ```
 
 **Full analysis, without resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate
 ```
 
 **Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time, from several minutes for small codebases to hours for large ones, so blocking the session is not acceptable. Capture the returned `task_id` so Step 5 can poll it for completion.
@@ -134,7 +134,7 @@ Do not offer `--resume`. Do not attempt to continue a previous run. Run fresh wi
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
 
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.

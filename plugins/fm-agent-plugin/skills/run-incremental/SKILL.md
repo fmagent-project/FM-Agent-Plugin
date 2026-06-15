@@ -159,7 +159,7 @@ Use this mode for normal callers and direct user requests.
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
 
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file>
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate --incremental <intent-file>
 ```
 
 Do not pass `--resume` with incremental analysis.
@@ -184,7 +184,7 @@ This mode exists so the caller can treat one incremental FM-Agent run as one det
 Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with the generated intent file and no resume flag:
 
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --incremental <intent-file>
+source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate --incremental <intent-file>
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.
