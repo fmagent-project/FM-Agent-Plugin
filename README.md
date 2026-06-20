@@ -52,7 +52,7 @@ Then run `$HOME/.fm-agent-plugin/FM-Agent/install.sh` to install dependencies.
 
 ### config
 
-Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/.env` (sourced at runtime via `source .env`).
+Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/FM-Agent/.env` (loaded by FM-Agent via dotenv at runtime).
 
 Workflow:
 - If `.env` does not exist, create it with default values
@@ -89,7 +89,7 @@ Session artifacts live under `./fm_agent_plugin/`:
 ### run-full
 
 Execute full-project FM-Agent analysis from the plugin data directory against the current project directory (`./`):
-- Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - For full-project analysis, if `./fm_agent/` already exists, ask the user whether to **resume** (continue with `--resume`) or **start fresh** (run without `--resume`; FM-Agent handles prior-output cleanup).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -100,7 +100,7 @@ The skill also exposes an **orchestration mode** used exclusively by `/fm-agent:
 
 Execute incremental FM-Agent analysis from the plugin data directory against the current project directory (`./`):
 - Usage: `/fm-agent:run-incremental --incremental [<intent-msg>]`
-- Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - Generate the intent file from optional user-provided intent plus exported summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`
 - Run FM-Agent with `--incremental <generated-intent-file>`
 - Launch as a background task so the session is not blocked

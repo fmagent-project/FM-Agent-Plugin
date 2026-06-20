@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Help
 description: Use when the user asks to "fm-agent help", "how to use fm-agent", "fm-agent usage", "fm-agent commands", or needs information about FM-Agent plugin capabilities.
-version: 0.3.2
+version: 0.3.3
 ---
 
 Provide help and usage information for the FM-Agent plugin.
@@ -33,7 +33,7 @@ Then run `$HOME/.fm-agent-plugin/FM-Agent/install.sh` to install dependencies.
 
 ## config
 
-Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/.env` (sourced at runtime via `source .env`).
+Read and modify FM-Agent settings stored in `$HOME/.fm-agent-plugin/FM-Agent/.env` (loaded by FM-Agent via dotenv at runtime).
 
 Workflow:
 - If `.env` does not exist, create it with default values
@@ -50,7 +50,7 @@ Workflow:
 ## run-full
 
 Execute full-project FM-Agent analysis from the plugin data directory against the current project directory (`./`):
-- Verify `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (run without `--resume`; FM-Agent handles prior-output cleanup).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -61,7 +61,7 @@ The skill also exposes an **orchestration mode** used by `/fm-agent:auto-fix` to
 
 Execute incremental FM-Agent analysis from the plugin data directory against the current project directory (`./`):
 - Takes one required argument, `--incremental`, and an optional `<intent-msg>`
-- Verifies `$HOME/.fm-agent-plugin/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verifies `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
 - Generates the intent file from optional user-provided intent plus export summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`
 - Runs FM-Agent with `--incremental <generated-intent-file>`
 - Launches as a background task so the session is not blocked

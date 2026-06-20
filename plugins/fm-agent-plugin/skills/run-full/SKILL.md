@@ -1,7 +1,7 @@
 ---
 name: FM-Agent-Run-Full
 description: Use when the user asks to run full-project FM-Agent analysis, execute full FM-Agent verification, or analyze the whole current project with FM-Agent. Takes no arguments.
-version: 0.1.1
+version: 0.1.2
 allowed-tools: Bash(*), AskUserQuestion, Skill
 ---
 
@@ -42,10 +42,10 @@ Use these setup steps before either invocation mode runs FM-Agent.
 
 ### Step 1: Check for API Key
 
-Check whether `$HOME/.fm-agent-plugin/.env` exists and contains the API key:
+Check whether `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key:
 
 ```bash
-cat $HOME/.fm-agent-plugin/.env
+cat $HOME/.fm-agent-plugin/FM-Agent/.env
 ```
 
 If the file or the API key is missing, stop execution and ask the user to run `/fm-agent:config` to set up configuration.
@@ -100,16 +100,16 @@ If the directory does not exist, proceed to Step 4 without `--resume`.
 
 ### Step 4: Run Full FM-Agent Analysis
 
-Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory (`./`). Combine the env sourcing and the run into a single command so the API key is available to the subprocess.
+Run FM-Agent from its own checkout directory (`$HOME/.fm-agent-plugin/FM-Agent`) to analyze the current project directory. Capture the project directory before changing directories so the correct project path is passed after `cd`.
 
 **Full analysis, with resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate --resume
+proj_dir=$(pwd) && cd $HOME/.fm-agent-plugin/FM-Agent && uv run python main.py "$proj_dir" --isolate --resume
 ```
 
 **Full analysis, without resume:**
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate
+proj_dir=$(pwd) && cd $HOME/.fm-agent-plugin/FM-Agent && uv run python main.py "$proj_dir" --isolate
 ```
 
 **Always launch this as a background task with `run_in_background: true`.** FM-Agent analysis can take a long time, from several minutes for small codebases to hours for large ones, so blocking the session is not acceptable. Capture the returned `task_id` so Step 5 can poll it for completion.
@@ -131,10 +131,10 @@ This mode exists so the caller can treat one full-project FM-Agent run as one de
 
 Do not offer `--resume`. Do not attempt to continue a previous run. Run fresh without manually removing `fm_agent/`; FM-Agent handles prior-output cleanup when it starts without `--resume`.
 
-Run FM-Agent from the plugin data directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory (`./`) with no incremental flag and no resume flag:
+Run FM-Agent from its own checkout directory (`$HOME/.fm-agent-plugin/FM-Agent`) against the current project directory with no incremental flag and no resume flag:
 
 ```bash
-source $HOME/.fm-agent-plugin/.env && uv run python $HOME/.fm-agent-plugin/FM-Agent/main.py ./ --isolate
+proj_dir=$(pwd) && cd $HOME/.fm-agent-plugin/FM-Agent && uv run python main.py "$proj_dir" --isolate
 ```
 
 Run this synchronously for orchestration mode. Wait for the command to exit before continuing.
