@@ -39,18 +39,20 @@ Workflow:
 - If `.env` does not exist, create it with default values
 - List the current `.env` values as a table
 - Ask whether to modify any settings; if yes, use AskUserQuestion (multi-select) to let the user pick which settings to modify and prompt for each new value
-- After writing changes, verify `LLM_API_KEY` is set; if not, loop back to the modification step
+- After writing changes, verify the selected backend. In local CLI backend mode, `LLM_API_KEY` is not required; in upstream OpenCode/API mode, verify `LLM_API_KEY`.
 
 **Configurable settings** (all stored in `.env`):
-- `LLM_API_KEY` - API key (required for FM-Agent LLM calls)
+- `LLM_API_KEY` - API key (required only for upstream OpenCode/API mode)
 - `LLM_API_BASE_URL` - API endpoint (default: `https://openrouter.ai/api/v1`)
-- `LLM_MODEL` - Default model used by FM-Agent (default: `anthropic/claude-sonnet-4.6`)
+- `LLM_MODEL` - Optional model passed to `codex exec` or `claude -p`; leave empty to use the selected CLI default
+- `LLM_EFFORT` - Optional reasoning effort passed to `codex exec` or `claude -p`; leave empty to omit the effort flag
+- `FM_AGENT_MODEL_BACKEND` - `opencode`, `auto`, `codex-cli`, or `claude-cli` (default: `opencode`)
 - `OPENCODE_MODEL_PROVIDER` - Model provider used by OpenCode (default: `openrouter`)
 
 ## run-full
 
 Execute full-project FM-Agent analysis from the plugin data directory against the current project directory (`./`):
-- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and the selected backend is configured. In local CLI backend mode, do not require `LLM_API_KEY`.
 - If `./fm_agent/` already exists, ask the user whether to **resume** (continue the previous run with `--resume`) or **start fresh** (run without `--resume`; FM-Agent handles prior-output cleanup).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -61,7 +63,7 @@ The skill also exposes an **orchestration mode** used by `/fm-agent:auto-fix` to
 
 Execute incremental FM-Agent analysis from the plugin data directory against the current project directory (`./`):
 - Takes one required argument, `--incremental`, and an optional `<intent-msg>`
-- Verifies `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verifies `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and the selected backend is configured. In local CLI backend mode, do not require `LLM_API_KEY`.
 - Generates the intent file from optional user-provided intent plus export summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`
 - Runs FM-Agent with `--incremental <generated-intent-file>`
 - Launches as a background task so the session is not blocked

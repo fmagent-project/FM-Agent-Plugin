@@ -40,15 +40,29 @@ Mode selection is by entrypoint, not by implicit runtime caller detection:
 
 Use these setup steps before either invocation mode runs FM-Agent.
 
-### Step 1: Check for API Key
+### Step 1: Check Model Backend Configuration
 
-Check whether `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key:
+Check whether `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and whether the selected backend is configured:
 
 ```bash
-cat $HOME/.fm-agent-plugin/FM-Agent/.env
+cd "$HOME/.fm-agent-plugin/FM-Agent" && test -r .env && cat .env && \
+backend=$(awk -F= '/^FM_AGENT_MODEL_BACKEND=/{print tolower($2)}' .env | tail -n 1) && \
+backend=${backend:-opencode} && \
+case "$backend" in
+  auto)
+    command -v codex >/dev/null || command -v claude >/dev/null ;;
+  codex|codex-cli)
+    command -v codex >/dev/null ;;
+  claude|claude-cli)
+    command -v claude >/dev/null ;;
+  opencode|"")
+    grep -q '^LLM_API_KEY=.' .env ;;
+  *)
+    echo "Unsupported FM_AGENT_MODEL_BACKEND=$backend"; exit 1 ;;
+esac
 ```
 
-If the file or the API key is missing, stop execution and ask the user to run `/fm-agent:config` to set up configuration.
+If the file is missing, the backend is unsupported, the required local CLI is unavailable, or `LLM_API_KEY` is missing in upstream OpenCode mode, stop execution and ask the user to run `/fm-agent:config` to set up configuration.
 
 ### Step 2: Commit Pending Code Changes
 

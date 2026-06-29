@@ -42,6 +42,8 @@ Read file `$HOME/.fm-agent-plugin/FM-Agent/.env` and list configuration as table
 | `LLM_API_KEY`                   | <current_value>                |
 | `LLM_API_BASE_URL`              | <current_value>                |
 | `LLM_MODEL`                     | <current_value>                |
+| `LLM_EFFORT`                    | <current_value>                |
+| `FM_AGENT_MODEL_BACKEND`        | <current_value>                |
 | `OPENCODE_MODEL_PROVIDER`       | <current_value>                |
 
 Then ask user to select: "Do you want to modify any configuration? (yes/no)"
@@ -55,6 +57,8 @@ If the user selects "yes", then use AskUserQuestion to ask which configuration t
   - LLM_API_KEY
   - LLM_API_BASE_URL
   - LLM_MODEL
+  - LLM_EFFORT
+  - FM_AGENT_MODEL_BACKEND
   - OPENCODE_MODEL_PROVIDER
 
 For each selected configuration, ask for the new value:
@@ -64,7 +68,18 @@ Then update the `$HOME/.fm-agent-plugin/FM-Agent/.env` file with the new value.
 
 ### Step 3: Next Steps
 
-Check whether the user has set `LLM_API_KEY`. If not, inform the user to set it and go back to Step 2.
+Ensure local CLI backend defaults exist when the keys are missing:
+
+```bash
+cd $HOME/.fm-agent-plugin/FM-Agent && \
+grep -q '^FM_AGENT_MODEL_BACKEND=' .env || printf '\nFM_AGENT_MODEL_BACKEND=opencode\n' >> .env && \
+grep -q '^LLM_EFFORT=' .env || printf 'LLM_EFFORT=\n' >> .env
+```
+
+Check `FM_AGENT_MODEL_BACKEND`.
+
+- If it is `auto`, `codex`, `codex-cli`, `claude`, or `claude-cli`, do not require `LLM_API_KEY`. `LLM_MODEL` and `LLM_EFFORT` may be empty; empty `LLM_EFFORT` omits the effort flag.
+- If it is `opencode` or empty, check whether `LLM_API_KEY` is set. If not, inform the user to set it and go back to Step 2.
 
 After successful configuration, inform the user:
 

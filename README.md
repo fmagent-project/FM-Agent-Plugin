@@ -24,7 +24,7 @@ codex plugin add fm-agent-plugin@fm-agent-plugin
 ```
 
 **Important Note**:  
-FM-Agent analysis needs to write opencode db file `~/.local/share/opencode/opencode.db`. However, by default, codex can only read and edit files in the current workspace. To use FM-Agent properly, set codex permissions to Full Access.
+FM-Agent launches nested model sessions through the configured backend. In local CLI backend mode it uses `codex exec` from Codex sessions and `claude -p` from Claude Code sessions, and those sessions must be able to read the target project and write `fm_agent/` artifacts. To use FM-Agent properly, set codex permissions to Full Access.
 ```
 /permissions
 [Choose: Full Access]
@@ -58,12 +58,14 @@ Workflow:
 - If `.env` does not exist, create it with default values
 - List the current `.env` values as a table
 - Ask whether to modify any settings; if yes, use AskUserQuestion (multi-select) to let the user pick which settings to modify and prompt for each new value
-- After writing changes, verify `LLM_API_KEY` is set; if not, loop back to the modification step
+- After writing changes, verify the selected backend. In local CLI backend mode, `LLM_API_KEY` is not required; in upstream OpenCode/API mode, verify `LLM_API_KEY`.
 
 **Configurable settings** (all stored in `.env`):
-- `LLM_API_KEY` - OpenRouter API key (required for FM-Agent LLM calls)
+- `LLM_API_KEY` - OpenRouter API key (required only for upstream OpenCode/API mode)
 - `LLM_API_BASE_URL` - OpenRouter API endpoint (default: `https://openrouter.ai/api/v1`)
-- `LLM_MODEL` - Default model used by FM-Agent (default: `anthropic/claude-sonnet-4.6`)
+- `LLM_MODEL` - Optional model passed to `codex exec` or `claude -p`; leave empty to use the selected CLI default
+- `LLM_EFFORT` - Optional reasoning effort passed to `codex exec` or `claude -p`; leave empty to omit the effort flag
+- `FM_AGENT_MODEL_BACKEND` - `opencode`, `auto`, `codex-cli`, or `claude-cli` (default: `opencode`)
 - `OPENCODE_MODEL_PROVIDER` - Model provider used by OpenCode (default: `openrouter`)
 
 ### auto-fix
@@ -89,7 +91,7 @@ Session artifacts live under `./fm_agent_plugin/`:
 ### run-full
 
 Execute full-project FM-Agent analysis from the plugin data directory against the current project directory (`./`):
-- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and the selected backend is configured. In local CLI backend mode, do not require `LLM_API_KEY`.
 - For full-project analysis, if `./fm_agent/` already exists, ask the user whether to **resume** (continue with `--resume`) or **start fresh** (run without `--resume`; FM-Agent handles prior-output cleanup).
 - Launch as a background task so the session is not blocked
 - Schedule periodic polling via the `loop` skill to detect completion, then notify the user with success or failure.
@@ -100,7 +102,7 @@ The skill also exposes an **orchestration mode** used exclusively by `/fm-agent:
 
 Execute incremental FM-Agent analysis from the plugin data directory against the current project directory (`./`):
 - Usage: `/fm-agent:run-incremental --incremental [<intent-msg>]`
-- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and contains the API key (otherwise direct the user to `/fm-agent:config`)
+- Verify `$HOME/.fm-agent-plugin/FM-Agent/.env` exists and the selected backend is configured. In local CLI backend mode, do not require `LLM_API_KEY`.
 - Generate the intent file from optional user-provided intent plus exported summaries for commits after the last analyzed commit recorded in `fm_agent/version.log` through `HEAD`
 - Run FM-Agent with `--incremental <generated-intent-file>`
 - Launch as a background task so the session is not blocked
