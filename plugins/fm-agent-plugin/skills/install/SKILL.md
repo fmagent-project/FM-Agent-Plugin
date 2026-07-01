@@ -29,19 +29,28 @@ If `mkdir` fails (for example, due to permission errors), stop the installation 
 
 ### Step 2: Clone or Update FM-Agent
 
-Clone FM-Agent to `$HOME/.fm-agent-plugin/FM-Agent`, or update if it already exists:
+Clone FM-Agent to `$HOME/.fm-agent-plugin/FM-Agent`. If it already exists, preserve the local checkout because this installation may include local CLI backend patches:
 
 ```bash
 if [ -d "$HOME/.fm-agent-plugin/FM-Agent" ]; then
-  echo "FM-Agent already exists, updating..."
-  cd "$HOME/.fm-agent-plugin/FM-Agent" && git pull
+  echo "FM-Agent already exists; preserving local checkout and patches."
 else
   echo "Cloning FM-Agent..."
   cd "$HOME/.fm-agent-plugin/" && git clone https://github.com/fmagent-project/FM-Agent.git
 fi
 ```
 
-### Step 3: Install Dependencies
+### Step 3: Create Local CLI Backend Configuration
+
+Create `$HOME/.fm-agent-plugin/FM-Agent/.env` if needed, then ensure backend keys are present. The default remains `FM_AGENT_MODEL_BACKEND=opencode`, matching upstream FM-Agent. Users can switch to `auto`, `codex-cli`, or `claude-cli` when they want local CLI model execution. Empty `LLM_EFFORT` omits the effort flag.
+
+```bash
+cd "$HOME/.fm-agent-plugin/FM-Agent" && { [ -f .env ] || cp .env.example .env; } && \
+grep -q '^FM_AGENT_MODEL_BACKEND=' .env || printf '\nFM_AGENT_MODEL_BACKEND=opencode\n' >> .env && \
+grep -q '^LLM_EFFORT=' .env || printf 'LLM_EFFORT=\n' >> .env
+```
+
+### Step 4: Install Dependencies
 
 Run FM-Agent's install script to set up required dependencies:
 
@@ -51,7 +60,7 @@ Run FM-Agent's install script to set up required dependencies:
 
 If the install script fails, stop the installation and inform the user to install manually.
 
-### Step 4: Verify Installation
+### Step 5: Verify Installation
 
 After cloning and installing dependencies, confirm FM-Agent is ready:
 
@@ -63,7 +72,7 @@ else
 fi
 ```
 
-### Step 5: Next Steps
+### Step 6: Next Steps
 
 After successful installation, inform the user:
 
